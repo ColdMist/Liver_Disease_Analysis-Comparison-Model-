@@ -114,7 +114,7 @@ print('accuracy: TESTING (KNN) ', classifierKNN.score(X_test,y_test))
 #print('accuracy: TESTING (ANN) ', classifierANN.score(X_test,y_test))
 print("accuracy: TRAINING (ANN): %.2f%%" % (max(scores)*100))
 print("accuracy: TESTING (ANN)%s: %.2f%%" % (classifierANN.metrics_names[1], scores[1]*100))
-print("accuracy: TRAINING (Logistic Regression)" , (classifierLogisticReg.score(X_train,y_train)))
+print("accuracy: TRAINING (Logistic Regression) " , (classifierLogisticReg.score(X_train,y_train)))
 print('accuracy: TESTING (Logistic Regression) ', classifierLogisticReg.score(X_test, y_test))
 
 from sklearn.metrics import roc_curve, auc
