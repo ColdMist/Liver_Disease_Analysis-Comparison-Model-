@@ -72,19 +72,17 @@ from keras.optimizers import RMSprop
 opt = 'adam'
 def create_baseline():
     model = Sequential()
-    model.add(Dense(units = 12,  activation = 'relu', input_dim =10))
-    model.add(Dense(units = 14, activation = 'relu'))
-    model.add(Dense(units = 16, activation = 'relu'))
-    model.add(Dense(units = 12, activation = 'relu'))
-    model.add(Dense(units = 8, activation = 'relu'))
+    model.add(Dense(units = 100,  activation = 'relu', input_dim =10))
+    model.add(Dense(units = 100, activation = 'relu'))
+    model.add(Dense(units = 150, activation = 'relu'))
     #model.add(Dense(units = 1, activation = 'relu'))
-    model.add(Dense(units =8,  activation = 'relu'))
+    model.add(Dense(units =50,  activation = 'relu'))
     model.add(Dense(1, activation = 'sigmoid'))
     model.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = ['accuracy'])
     return model
 #neural Network training
 classifierANN = create_baseline()
-classifierANN.fit(X_train, y_train, epochs=1000, batch_size=64)
+classifierANN.fit(X_train, y_train, epochs=1000,batch_size=64)
 y_pred_ANN = classifierANN.predict(X_test)
 scores = classifierANN.evaluate(X_train, y_train)
 ANN_filter = np.where(y_pred_ANN > 0.5,1,0)
@@ -114,9 +112,9 @@ print('accuracy: TESTING (GNB) ', classifierGaussianNB.score(X_test,y_test))
 print ('accuracy: TRAINING (KNN)', classifierKNN.score(X_train,y_train))
 print('accuracy: TESTING (KNN) ', classifierKNN.score(X_test,y_test))
 #print('accuracy: TESTING (ANN) ', classifierANN.score(X_test,y_test))
-print("accuracy: TRAINING (ANN): %.2f%%" % max(scores))
+print("accuracy: TRAINING (ANN): %.2f%%" % (max(scores)*100))
 print("accuracy: TESTING (ANN)%s: %.2f%%" % (classifierANN.metrics_names[1], scores[1]*100))
-print("accuracy: TRAINING (Logistic Regression)%s: %.2f%%" % (classifierANN.metrics_names[1], scores[1]*100))
+print("accuracy: TRAINING (Logistic Regression)" , (classifierLogisticReg.score(X_train,y_train)))
 print('accuracy: TESTING (Logistic Regression) ', classifierLogisticReg.score(X_test, y_test))
 
 from sklearn.metrics import roc_curve, auc
