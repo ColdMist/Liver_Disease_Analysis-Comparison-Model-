@@ -2,6 +2,8 @@
 # Package imports
 import matplotlib.pyplot as plt
 import numpy as np
+import plotly.plotly as py
+import plotly.graph_objs as go
 import sklearn
 import sklearn.datasets
 import sklearn.linear_model
@@ -23,19 +25,47 @@ from keras.models import load_model
 from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import roc_curve, auc
+from keras import regularizers
+from sklearn.preprocessing import MinMaxScaler
+from utilities import *
 
 dataset = pd.read_csv('Dataset/Indian Liver Patient Dataset (ILPD).csv')
+#dataset = pd.read_csv('Dataset/Imputed_data.csv')
+#dataset = pd.read_csv('Dataset/my_data.csv')
 dataset = pd.DataFrame(dataset)
 #dataset ['Problem'] = dataset['Problem'].astype('category')
+#Encode the categorical variables
 label_encoder = LabelEncoder()
 dataset['Problem'] = label_encoder.fit_transform(dataset['Problem'])
 dataset['Gender'] = label_encoder.fit_transform(dataset['Gender'])
-dataset.describe()
+#Find the highly correlated variables
+corr_value=get_higly_correlated_matrix(dataset)
 
-X = dataset.iloc[:,[0,1,2,3,4,5,6,7,8,9]].values
-imp = Imputer(missing_values="NaN", strategy = 'mean', axis = 0)
-X = imp.fit_transform(X)
+dataset['Age'] = remove_outlier(dataset, 'Age')
+dataset['TB'] = remove_outlier(dataset, 'TB')
+dataset['DB'] = remove_outlier(dataset, 'DB')
+dataset['Alkphos'] = remove_outlier(dataset, 'Alkphos')
+dataset['Sgpt '] = remove_outlier(dataset, 'Sgpt ')
+dataset['Sgot'] = remove_outlier(dataset, 'Sgot')
+dataset['TP'] = remove_outlier(dataset, 'TP')
+dataset['ALB'] = remove_outlier(dataset, 'ALB')
+dataset['A/G'] = remove_outlier(dataset, 'A/G')
+
+#dataset = miceImputation(pd.DataFrame(dataset))
+#Find the highly correlated features
+
+#Remove highly correlated variables over a threshold
+X = dataset.iloc[:,[0,1,3,4,5,8,9]].values
+X = miceImputation(X)
+#imp = Imputer(missing_values="NaN", strategy = 'mean', axis = 0)
 y = dataset.iloc[:,10].values
+#Scale specific features
+X = scaleMinMax(X)
+'''
+showBoxPlot(X[:,[6]])
+showBoxPlot(X[:,[2]])
+show_histogram(X[:,[2]])
+'''
 # Splitting the dataset into the Training set and Test set
 from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20, random_state = 42)
@@ -72,9 +102,9 @@ from keras.optimizers import RMSprop
 opt = 'adam'
 def create_baseline():
     model = Sequential()
-    model.add(Dense(units = 100,  activation = 'relu', input_dim =10))
+    model.add(Dense(units = 100,  activation = 'relu',  input_dim =7))
     model.add(Dense(units = 100, activation = 'relu'))
-    model.add(Dense(units = 150, activation = 'relu'))
+    model.add(Dense(units = 150, activation = 'relu', ))
     #model.add(Dense(units = 1, activation = 'relu'))
     model.add(Dense(units =50,  activation = 'relu'))
     model.add(Dense(1, activation = 'sigmoid'))
@@ -84,9 +114,12 @@ def create_baseline():
 classifierANN = create_baseline()
 classifierANN.fit(X_train, y_train, epochs=1000,batch_size=64)
 y_pred_ANN = classifierANN.predict(X_test)
+y_pred_ANN = (y_pred_ANN > 0.5)
 scores = classifierANN.evaluate(X_train, y_train)
 ANN_filter = np.where(y_pred_ANN > 0.5,1,0)
 
+score, acc = classifierANN.evaluate(X_test, y_test,
+                            batch_size=32)
 ##################
 # Predicting the Test set results
 y_pred_Dtree = classifierDtree.predict(X_test)
@@ -111,9 +144,9 @@ print ('accuracy: TRAINING (GNB)', classifierGaussianNB.score(X_train,y_train))
 print('accuracy: TESTING (GNB) ', classifierGaussianNB.score(X_test,y_test))
 print ('accuracy: TRAINING (KNN)', classifierKNN.score(X_train,y_train))
 print('accuracy: TESTING (KNN) ', classifierKNN.score(X_test,y_test))
-#print('accuracy: TESTING (ANN) ', classifierANN.score(X_test,y_test))
 print("accuracy: TRAINING (ANN): %.2f%%" % (max(scores)*100))
-print("accuracy: TESTING (ANN)%s: %.2f%%" % (classifierANN.metrics_names[1], scores[1]*100))
+print('accuracy: TESTING (ANN) ', acc)
+#print("accuracy: TESTING (ANN)%s: %.2f%%" % (classifierANN.metrics_names[1], score[1]*100))
 print("accuracy: TRAINING (Logistic Regression) " , (classifierLogisticReg.score(X_train,y_train)))
 print('accuracy: TESTING (Logistic Regression) ', classifierLogisticReg.score(X_test, y_test))
 
@@ -129,27 +162,35 @@ y_predict_probabilities_LogReg = classifierLogisticReg.predict_proba(X_test)[:,1
 
 fpr_Dtree, tpr_Dtree, _ = roc_curve(y_test, y_predict_probabilities_Dtree)
 roc_auc_Dtree = auc(fpr_Dtree, tpr_Dtree)
+print("Area under the curve Decision Tree: ", roc_auc_Dtree)
 
 fpr_RandomForest, tpr_RandomForest, _ = roc_curve(y_test, y_predict_probabilities_RandomForest)
 roc_auc_RandomForest = auc(fpr_RandomForest, tpr_RandomForest)
+print("Area under the curve Random Forest: ", roc_auc_RandomForest)
 
 fpr_SVM, tpr_SVM, _ = roc_curve(y_test, y_predict_probabilities_SVM)
 roc_auc_SVM = auc(fpr_SVM, tpr_SVM)
+print("Area under the curve Support Vector Machine: ", roc_auc_SVM)
 
 fpr_MLP, tpr_MLP, _ = roc_curve(y_test, y_predict_probabilities_MLP)
 roc_auc_MLP = auc(fpr_MLP, tpr_MLP)
+print("Area under the curve Multilayer Perceptron: " , roc_auc_MLP)
 
 fpr_GaussianNB, tpr_GaussianNB, _ = roc_curve(y_test, y_predict_probabilities_GaussianNB)
 roc_auc_GaussianNB = auc(fpr_GaussianNB, tpr_GaussianNB)
+print("Area under the curve Gaussian Naive Bayes: ", roc_auc_GaussianNB)
 
 fpr_KNN, tpr_KNN, _ = roc_curve(y_test, y_predict_probabilities_KNN)
 roc_auc_KNN = auc(fpr_KNN, tpr_KNN)
+print("Area under the curve K Nearest Neigbor: ", roc_auc_KNN)
 
 fpr_ANN, tpr_ANN, _ = roc_curve(y_test, y_predict_probabilities_ANN)
 roc_auc_ANN = auc(fpr_ANN, tpr_ANN)
+print("Area under the curve Artificial Neural Network: ", roc_auc_ANN)
 
 fpr_LogReg, tpr_LogReg, _ = roc_curve(y_test, y_predict_probabilities_LogReg)
 roc_auc_LogReg = auc(fpr_LogReg, tpr_LogReg)
+print("Area under the curve Logistic Regression: ", roc_auc_LogReg)
 
 plt.figure()
 plt.plot(fpr_Dtree, tpr_Dtree, color='darkorange',
@@ -174,5 +215,5 @@ plt.ylim([-0.01, 1.05])
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
 plt.title('ROC Curve')
-plt.legend(loc="lower right", fontsize=5)
+plt.legend(loc="lower right", fontsize=7)
 plt.show()#####code will be executed acco
